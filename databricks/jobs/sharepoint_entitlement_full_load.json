@@ -1,0 +1,73 @@
+{
+  "name": "mgdc_sharepoint_entitlement_full_load",
+  "job_clusters": [
+    {
+      "job_cluster_key": "mgdc_sharepoint_job_cluster",
+      "new_cluster": {
+        "spark_version": "13.3.x-scala2.12",
+        "node_type_id": "Standard_DS3_v2",
+        "num_workers": 8,
+        "custom_tags": {
+          "CostCenter": "SP_ENTITLEMENTS",
+          "DataProduct": "SharePointUserEntitlements"
+        },
+        "azure_attributes": {
+          "availability": "ON_DEMAND_AZURE",
+          "first_on_demand": 1,
+          "spot_bid_max_price": -1
+        },
+        "spark_conf": {
+          "spark.databricks.delta.preview.enabled": "true",
+          "spark.sql.shuffle.partitions": "200"
+        }
+      }
+    }
+  ],
+  "tasks": [
+    {
+      "task_key": "bronze_full_load",
+      "job_cluster_key": "mgdc_sharepoint_job_cluster",
+      "notebook_task": {
+        "notebook_path": "/Repos/ubs/mgdc-sharepoint/databricks/notebooks/bronze_sharepoint_user_entitlements",
+        "base_parameters": {
+          "environment": "prod",
+          "run_mode": "full"
+        }
+      }
+    },
+    {
+      "task_key": "silver_full_load",
+      "depends_on": [
+        {
+          "task_key": "bronze_full_load"
+        }
+      ],
+      "job_cluster_key": "mgdc_sharepoint_job_cluster",
+      "notebook_task": {
+        "notebook_path": "/Repos/ubs/mgdc-sharepoint/databricks/notebooks/silver_sharepoint_user_entitlements",
+        "base_parameters": {
+          "environment": "prod",
+          "run_mode": "full"
+        }
+      }
+    },
+    {
+      "task_key": "gold_full_load",
+      "depends_on": [
+        {
+          "task_key": "silver_full_load"
+        }
+      ],
+      "job_cluster_key": "mgdc_sharepoint_job_cluster",
+      "notebook_task": {
+        "notebook_path": "/Repos/ubs/mgdc-sharepoint/databricks/notebooks/gold_sharepoint_user_entitlements",
+        "base_parameters": {
+          "environment": "prod",
+          "run_mode": "full",
+          "table_name": "sharepoint_user_entitlements_prod"
+        }
+      }
+    }
+  ],
+  "format": "MULTI_TASK"
+}
