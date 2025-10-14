@@ -97,8 +97,7 @@ def read_json_with_partition(
         for value in partitions
     ]
     df = (
-        spark.read.option("multiline", True)
-        .json(partition_paths)
+        spark.read.json(partition_paths)
         .withColumn("_file_path", F.input_file_name())
         .withColumn(
             partition_key,
