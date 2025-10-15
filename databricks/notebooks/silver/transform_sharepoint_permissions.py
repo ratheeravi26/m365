@@ -79,11 +79,9 @@ def transform_sharepoint_permissions(df: DataFrame) -> DataFrame:
     transformed = (
         exploded_df.select(
             F.col("SiteId").alias("site_id"),
-            F.col("SiteUrl").alias("site_url"),
             F.col("WebId").alias("web_id"),
             F.col("ListId").alias("list_id"),
             F.col("ListTitle").alias("list_title"),
-            F.col("ListUrl").alias("list_url"),
             F.col("ListItemId").alias("list_item_id"),
             F.col("UniqueId").alias("unique_item_id"),
             F.col("ItemType").alias("item_type"),
