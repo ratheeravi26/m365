@@ -143,20 +143,28 @@ def write_delta(
     if df.rdd.isEmpty():
         return {"status": "skipped", "reason": "No new partitions detected"}
 
+    df_with_loaded_ts = df.withColumn("bronze_loaded_on_utc", F.current_timestamp())
+
     (
-        df.withColumn("bronze_loaded_on_utc", F.current_timestamp())
-        .write.format("delta")
+        df_with_loaded_ts.write.format("delta")
         .mode("append")
         .partitionBy(partition_key)
         .save(target_path)
     )
 
+    rows_written = df.count()
+
     if table_name:
-        spark.sql(f"CREATE TABLE IF NOT EXISTS {table_name} USING DELTA LOCATION '{target_path}'")
+        (
+            df_with_loaded_ts.write.format("delta")
+            .mode("append")
+            .partitionBy(partition_key)
+            .saveAsTable(table_name)
+        )
 
     return {
         "status": "loaded",
-        "rows_written": str(df.count()),
+        "rows_written": str(rows_written),
         "target_path": target_path,
         "table_name": table_name or "",
     }
