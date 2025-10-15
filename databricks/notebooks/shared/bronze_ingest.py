@@ -96,9 +96,15 @@ def read_json_with_partition(
         f"{source_path}/year={value[:4]}/month={value[4:6]}/day={value[6:8]}"
         for value in partitions
     ]
+    df_raw = spark.read.json(partition_paths)
+
+    if "SnapshotDate" not in df_raw.columns:
+        df_raw = df_raw.withColumn("SnapshotDate", F.lit(None).cast("string"))
+    if "snapshotDate" not in df_raw.columns:
+        df_raw = df_raw.withColumn("snapshotDate", F.lit(None).cast("string"))
+
     df = (
-        spark.read.json(partition_paths)
-        .withColumn("_file_path", F.input_file_name())
+        df_raw.withColumn("_file_path", F.input_file_name())
         .withColumn(
             partition_key,
             F.concat(
@@ -109,16 +115,16 @@ def read_json_with_partition(
         )
         .withColumn(
             "snapshot_timestamp_utc",
-            F.to_timestamp(
-                F.coalesce(
-                    F.col("SnapshotDate"),
-                    F.col("snapshotDate"),
-                    F.concat_ws(
-                        "-",
-                        F.substring(F.col(partition_key), 1, 4),
-                        F.substring(F.col(partition_key), 5, 2),
-                        F.substring(F.col(partition_key), 7, 2),
-                    ),
+            F.coalesce(
+                F.to_timestamp(
+                    F.when(F.col("SnapshotDate").isNotNull(), F.col("SnapshotDate"))
+                ),
+                F.to_timestamp(
+                    F.when(F.col("snapshotDate").isNotNull(), F.col("snapshotDate"))
+                ),
+                F.to_timestamp(
+                    F.when(F.col(partition_key).isNotNull(), F.col(partition_key)),
+                    "yyyyMMdd",
                 )
             ),
         )
@@ -131,6 +137,7 @@ def read_json_with_partition(
         )
         .drop("_file_path")
     )
+
     return df
 
 
