@@ -62,19 +62,25 @@ def write_silver_delta(
 
     table_name = build_table_name(catalog_name, schema_name, table_prefix, output_alias)
 
-    write_mode = "append" if run_mode == "incremental" else "overwrite"
+    df_with_metadata = df.withColumn("silver_loaded_on_utc", F.current_timestamp())
+    row_count = df_with_metadata.count()
+
+    storage_mode = "append" if run_mode == "incremental" else "overwrite"
     (
-        df.withColumn("silver_loaded_on_utc", F.current_timestamp())
-        .write.format("delta")
-        .mode(write_mode)
+        df_with_metadata.write.format("delta")
+        .mode(storage_mode)
         .partitionBy(partition_key)
         .save(target_path)
     )
 
     if table_name:
-        spark.sql(f"CREATE TABLE IF NOT EXISTS {table_name} USING DELTA LOCATION '{target_path}'")
-
-    row_count = df.count()
+        table_mode = "append" if run_mode == "incremental" else "overwrite"
+        (
+            df_with_metadata.write.format("delta")
+            .mode(table_mode)
+            .partitionBy(partition_key)
+            .saveAsTable(table_name)
+        )
     return {
         "status": "loaded",
         "rows_written": row_count,
