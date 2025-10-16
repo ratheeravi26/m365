@@ -19,12 +19,11 @@ def annotate_permissions(perms_df: DataFrame, sites_df: DataFrame) -> DataFrame:
         F.col("site_id").alias("sites_site_id"),
         F.col("snapshot_date").alias("sites_snapshot_date"),
         F.col("site_url").alias("sites_site_url"),
-        F.col("site_title").alias("sites_site_title"),
-        F.col("site_template"),
-        F.col("site_privacy"),
-        F.col("sensitivity_label_name"),
-        F.col("is_hub_site"),
-        F.col("is_teams_connected_site"),
+        F.col("root_web_title").alias("sites_root_web_title"),
+        F.col("root_web_template").alias("sites_root_web_template"),
+        F.col("site_privacy").alias("sites_site_privacy"),
+        F.col("is_hub_site").alias("sites_is_hub_site"),
+        F.col("is_teams_connected_site").alias("sites_is_teams_connected_site"),
     )
 
     perms_enriched = (
@@ -40,12 +39,11 @@ def annotate_permissions(perms_df: DataFrame, sites_df: DataFrame) -> DataFrame:
         .select(
             "perms.*",
             F.col("sites.sites_site_url").alias("sites_site_url"),
-            F.col("sites.sites_site_title").alias("sites_site_title"),
-            F.col("sites.site_template").alias("sites_site_template"),
-            F.col("sites.site_privacy").alias("sites_site_privacy"),
-            F.col("sites.sensitivity_label_name").alias("sites_sensitivity_label_name"),
-            F.col("sites.is_hub_site").alias("sites_is_hub_site"),
-            F.col("sites.is_teams_connected_site").alias("sites_is_teams_connected_site"),
+            F.col("sites.sites_root_web_title").alias("sites_root_web_title"),
+            F.col("sites.sites_root_web_template").alias("sites_root_web_template"),
+            F.col("sites.sites_site_privacy").alias("sites_site_privacy"),
+            F.col("sites.sites_is_hub_site").alias("sites_is_hub_site"),
+            F.col("sites.sites_is_teams_connected_site").alias("sites_is_teams_connected_site"),
         )
         .withColumn(
             "principal_type_normalized",
@@ -55,11 +53,11 @@ def annotate_permissions(perms_df: DataFrame, sites_df: DataFrame) -> DataFrame:
         )
         .withColumn(
             "site_url_resolved",
-            F.coalesce(F.col("site_url"), F.col("sites_site_url")),
+            F.col("sites_site_url"),
         )
         .withColumn(
             "site_title_resolved",
-            F.coalesce(F.col("sites_site_title"), F.col("site_id")),
+            F.coalesce(F.col("sites_root_web_title"), F.col("site_id")),
         )
         .withColumn(
             "sharepoint_object_type",
@@ -80,8 +78,6 @@ def annotate_permissions(perms_df: DataFrame, sites_df: DataFrame) -> DataFrame:
             "sharepoint_object_url",
             F.coalesce(
                 F.col("item_url"),
-                F.col("list_url"),
-                F.col("site_url"),
                 F.col("sites_site_url"),
             ),
         )

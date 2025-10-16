@@ -130,8 +130,6 @@ def transform_sharepoint_sites(df: DataFrame) -> DataFrame:
             F.col("SiteConnectedToPrivateGroup").alias("site_connected_to_private_group"),
             F.col("Privacy").alias("site_privacy"),
             F.col("Classification").alias("site_classification"),
-            col_or_null(df, "SensitivityLabelInfo.DisplayName", T.StringType()).alias("sensitivity_label_name"),
-            col_or_null(df, "SensitivityLabelInfo.Id", T.StringType()).alias("sensitivity_label_id"),
             F.col("IBMode").alias("ib_mode"),
             col_or_null(df, "Owner.AadObjectId", T.StringType()).alias("owner_aad_object_id"),
             col_or_null(df, "Owner.Email", T.StringType()).alias("owner_email"),
