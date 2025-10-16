@@ -47,6 +47,7 @@ STAGING_BASE_PATH = resolved_widgets["staging_base_path"].rstrip("/")
 RUN_MODE = validate_run_mode(resolved_widgets["run_mode"])
 TABLE_PREFIX = resolved_widgets["table_prefix"].strip()
 
+dbutils.widgets.text("snapshot_partitions", "")
 snapshot_partitions_raw = dbutils.widgets.get("snapshot_partitions")
 SNAPSHOT_PARTITIONS: List[str] = [p for p in snapshot_partitions_raw.split(",") if p] if snapshot_partitions_raw else []
 
