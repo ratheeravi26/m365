@@ -15,6 +15,7 @@ from typing import Dict, List
 
 from pyspark.sql import DataFrame, SparkSession
 from pyspark.sql import functions as F
+from pyspark.sql import types as T
 
 from shared.environment import configure_environment, ensure_catalog_schema_pair, validate_run_mode
 from shared.bronze_ingest import build_target_path
@@ -71,18 +72,22 @@ ensure_catalog_schema_pair(CATALOG_NAME, SCHEMA_NAME)
 # COMMAND ----------
 
 def transform_sharepoint_permissions(df: DataFrame) -> DataFrame:
+    shared_with_counts_map = F.map_from_arrays(
+        F.transform(F.col("SharedWithCount"), lambda x: x["Type"]),
+        F.transform(F.col("SharedWithCount"), lambda x: x["Count"].cast("long")),
+    )
+
     exploded_df = (
-        df.withColumn("shared_with_entry", F.explode_outer("SharedWith"))
-        .withColumn("shared_with_count_entry", F.explode_outer("SharedWithCount"))
+        df.withColumn("shared_with_count_map", shared_with_counts_map)
+        .withColumn("shared_with_entry", F.explode_outer("SharedWith"))
     )
 
     transformed = (
         exploded_df.select(
+            F.col("ptenant").alias("tenant_id"),
             F.col("SiteId").alias("site_id"),
             F.col("WebId").alias("web_id"),
             F.col("ListId").alias("list_id"),
-            F.col("ListItemId").alias("list_item_id"),
-            F.col("UniqueId").alias("unique_item_id"),
             F.col("ItemType").alias("item_type"),
             F.col("ItemURL").alias("item_url"),
             F.col("FileExtension").alias("file_extension"),
@@ -106,8 +111,7 @@ def transform_sharepoint_permissions(df: DataFrame) -> DataFrame:
             F.col("shared_with_entry.UPN").alias("principal_upn"),
             F.col("shared_with_entry.UserLoginName").alias("principal_login_name"),
             F.col("shared_with_entry.UserCount").alias("principal_user_count"),
-            F.col("shared_with_count_entry.Type").alias("principal_scope_type"),
-            F.col("shared_with_count_entry.Count").alias("principal_scope_count"),
+            F.col("shared_with_count_map")[F.col("shared_with_entry.Type")].alias("principal_scope_count"),
         )
         .withColumn(
             "principal_group_key",
