@@ -71,10 +71,32 @@ ensure_catalog_schema_pair(CATALOG_NAME, SCHEMA_NAME)
 
 # COMMAND ----------
 
+def _shared_with_fields(df: DataFrame) -> set[str]:
+    for field in df.schema.fields:
+        if field.name == "SharedWith" and isinstance(field.dataType, T.ArrayType):
+            element_type = field.dataType.elementType
+            if isinstance(element_type, T.StructType):
+                return {nested_field.name for nested_field in element_type.fields}
+    return set()
+
+
 def transform_sharepoint_permissions(df: DataFrame) -> DataFrame:
     shared_with_counts_map = F.map_from_arrays(
         F.transform(F.col("SharedWithCount"), lambda x: x["Type"]),
         F.transform(F.col("SharedWithCount"), lambda x: x["Count"].cast("long")),
+    )
+
+    shared_with_fields = _shared_with_fields(df)
+
+    def shared_with_entry_col(field_name: str, dtype: T.DataType = T.StringType()) -> F.Column:
+        if field_name in shared_with_fields:
+            return F.col(f"shared_with_entry.`{field_name}`")
+        return F.lit(None).cast(dtype)
+
+    principal_login_name_col = (
+        shared_with_entry_col("UserLoginName")
+        if "UserLoginName" in shared_with_fields
+        else shared_with_entry_col("LoginName")
     )
 
     exploded_df = (
@@ -111,7 +133,7 @@ def transform_sharepoint_permissions(df: DataFrame) -> DataFrame:
             F.col("shared_with_entry.Email").alias("principal_email"),
             F.col("shared_with_entry.AadObjectId").alias("principal_aad_object_id"),
             F.col("shared_with_entry.UPN").alias("principal_upn"),
-            F.col("shared_with_entry.UserLoginName").alias("principal_login_name"),
+            principal_login_name_col.alias("principal_login_name"),
             F.col("shared_with_entry.UserCount").alias("principal_user_count"),
             F.col("shared_with_entry.Type").alias("principal_scope_type"),
             F.col("shared_with_count_map")[F.col("shared_with_entry.Type")].alias("principal_scope_count"),
