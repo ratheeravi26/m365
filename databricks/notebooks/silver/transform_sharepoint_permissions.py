@@ -88,6 +88,8 @@ def transform_sharepoint_permissions(df: DataFrame) -> DataFrame:
             F.col("SiteId").alias("site_id"),
             F.col("WebId").alias("web_id"),
             F.col("ListId").alias("list_id"),
+            F.col("ListItemId").alias("list_item_id"),
+            F.col("UniqueId").alias("unique_item_id"),
             F.col("ItemType").alias("item_type"),
             F.col("ItemURL").alias("item_url"),
             F.col("FileExtension").alias("file_extension"),
@@ -111,6 +113,7 @@ def transform_sharepoint_permissions(df: DataFrame) -> DataFrame:
             F.col("shared_with_entry.UPN").alias("principal_upn"),
             F.col("shared_with_entry.UserLoginName").alias("principal_login_name"),
             F.col("shared_with_entry.UserCount").alias("principal_user_count"),
+            F.col("shared_with_entry.Type").alias("principal_scope_type"),
             F.col("shared_with_count_map")[F.col("shared_with_entry.Type")].alias("principal_scope_count"),
         )
         .withColumn(
@@ -128,6 +131,7 @@ def transform_sharepoint_permissions(df: DataFrame) -> DataFrame:
                 "site_id",
                 "list_id",
                 "list_item_id",
+                "unique_item_id",
                 "principal_email",
                 "principal_aad_object_id",
                 "principal_login_name",
